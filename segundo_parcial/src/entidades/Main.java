@@ -2,6 +2,8 @@ package entidades;
 
 import java.util.Scanner;
 
+import igu.Menu;
+
 public class Main {
     private static int eleccion;
 
@@ -21,8 +23,12 @@ public class Main {
 
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
-
-        Resto resto = new Resto(1, "Paucke ATENEO Inmaculada", "General Lopez 2545", "Santa fe");
+        Menu menu = new Menu();
+        menu.setVisible(true);
+        
+        
+        
+   /*     Resto resto = new Resto(1, "Paucke ATENEO Inmaculada", "General Lopez 2545", "Santa fe");
         resto.inicializarMesasPredeterminado();
 
         do {
@@ -66,4 +72,6 @@ public class Main {
             }
         } while (eleccion != 0);
     }
+    */
+}
 }

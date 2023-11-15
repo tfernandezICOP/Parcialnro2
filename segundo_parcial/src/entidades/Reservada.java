@@ -15,4 +15,8 @@ public class Reservada implements Estado {
     public void ocupar(Mesa m) {
         m.setEstado(new Ocupada());
     }
+    @Override
+    public String nombreEstado() {
+        return "reservada";
+    }
 }

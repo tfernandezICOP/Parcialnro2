@@ -90,13 +90,13 @@ public class Resto {
         int capacidad6personas = 6;
 
         for (int i = 1; i <= mesas2personas; i++) {
-            mesas.add(new Mesa(i, i, capacidad2personas, 0, new Liberada()));
+            mesas.add(new Mesa(i, i, capacidad2personas, 0, new Liberada(), this));
         }
         for (int i = mesas2personas + 1; i <= mesas2personas + mesas4personas; i++) {
-            mesas.add(new Mesa(i, i, capacidad4personas, 0, new Liberada()));
+            mesas.add(new Mesa(i, i, capacidad4personas, 0, new Liberada(), this));
         }
         for (int i = mesas2personas + mesas4personas + 1; i <= mesas2personas + mesas4personas + mesas6personas; i++) {
-            mesas.add(new Mesa(i, i, capacidad6personas, 0, new Liberada()));
+            mesas.add(new Mesa(i, i, capacidad6personas, 0, new Liberada(), this));
         }
     }
 
@@ -291,7 +291,7 @@ public class Resto {
         System.out.print("Ingrese el consumo inicial de la nueva mesa: ");
         int consumo = sc.nextInt();
 
-        Mesa nuevaMesa = new Mesa(mesas.size() + 1, nroMesa, capacidad, consumo, new Liberada());
+        Mesa nuevaMesa = new Mesa(mesas.size() + 1, nroMesa, capacidad, consumo, new Liberada(), this);
         mesas.add(nuevaMesa);
 
         System.out.println("Nueva mesa agregada: " + nuevaMesa.toString());
@@ -469,5 +469,8 @@ public class Resto {
             }
         }
     }
-
+    
+    public String nombre() {
+        return nombre; 
+    }
 }

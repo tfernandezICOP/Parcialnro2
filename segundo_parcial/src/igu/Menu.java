@@ -1,50 +1,33 @@
 package igu;
 
 import java.awt.BorderLayout;
-import java.awt.EventQueue;
-import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.List;
 
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JButton;
+import javax.swing.JComboBox;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.border.EmptyBorder;
-import javax.swing.JLabel;
-import java.awt.Font;
-import javax.swing.JTextField;
-import javax.swing.JButton;
-import java.awt.event.ActionListener;
-import java.awt.event.ActionEvent;
+
+import entidades.Resto;
+import servicio.RestoServic;
 
 public class Menu extends JFrame {
 
     private static final long serialVersionUID = 1L;
     private JPanel contentPane;
+    private JComboBox<Resto> mostrarresto;
 
-    /**
-     * Launch the application.
-     */
-    public static void main(String[] args) {
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    Menu frame = new Menu();
-                    frame.setVisible(true);
-                    frame.setLocationRelativeTo(null); // Centra el marco en la pantalla
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
-    /**
-     * Create the frame.
-     */
     public Menu() {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(100, 100, 450, 300);
+        setBounds(100, 100, 597, 391);
         contentPane = new JPanel();
         contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
-
         setContentPane(contentPane);
         contentPane.setLayout(new BorderLayout(0, 0));
 
@@ -52,29 +35,71 @@ public class Menu extends JFrame {
         contentPane.add(panel, BorderLayout.CENTER);
         panel.setLayout(null);
 
-        JLabel Labelmenu = new JLabel("Menu");
-        Labelmenu.setBounds(188, 5, 48, 22);
-        Labelmenu.setFont(new Font("Arial", Font.BOLD, 18));
+        JLabel Labelmenu = new JLabel("Menú");
+        Labelmenu.setBounds(245, 4, 120, 40);
+        Labelmenu.setFont(new Font("Arial", Font.BOLD, 30));
         panel.add(Labelmenu);
-        
-        JButton btnNewButton = new JButton("Reserva");
-        btnNewButton.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent e) {
-        	}
+
+        JButton btnReserva = new JButton("Reserva");
+        btnReserva.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Resto restauranteSeleccionado = (Resto) mostrarresto.getSelectedItem();
+                ReservaIgu reservaFrame = new ReservaIgu(restauranteSeleccionado);
+                reservaFrame.setVisible(true);
+            }
         });
-        btnNewButton.setBounds(170, 44, 89, 23);
-        panel.add(btnNewButton);
-        
-        JButton btnInformacion = new JButton("Informacion");
-        btnInformacion.setBounds(170, 112, 89, 23);
+        btnReserva.setBounds(226, 100, 120, 40);
+        panel.add(btnReserva);
+
+        JButton btnGestion = new JButton("Gestión");
+        btnGestion.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Resto restauranteSeleccionado = (Resto) mostrarresto.getSelectedItem();
+                Gestionar gestionFrame = new Gestionar(restauranteSeleccionado);
+                gestionFrame.setVisible(true);
+            }
+        });
+        btnGestion.setBounds(226, 170, 120, 40);
+        panel.add(btnGestion);
+
+        JButton btnInformacion = new JButton("Información");
+        btnInformacion.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Resto restauranteSeleccionado = (Resto) mostrarresto.getSelectedItem();
+                Informacion info = new Informacion(restauranteSeleccionado);
+                info.setVisible(true);
+            }
+        });
+        btnInformacion.setBounds(226, 240, 120, 40);
         panel.add(btnInformacion);
-        
-        JButton btnAcercaDe = new JButton("Acerca de");
-        btnAcercaDe.setBounds(170, 185, 89, 23);
-        panel.add(btnAcercaDe);
-        
+
         JButton btnSalir = new JButton("Salir");
-        btnSalir.setBounds(325, 217, 89, 23);
+        btnSalir.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                dispose();
+            }
+        });
+        btnSalir.setBounds(425, 291, 89, 40);
         panel.add(btnSalir);
+
+        mostrarresto = new JComboBox<>();
+        mostrarresto.setBounds(10, 4, 203, 40);
+        panel.add(mostrarresto);
+
+        RestoServic restoServic = new RestoServic();
+        List<Resto> restaurantes = restoServic.obtenerTodosLosRestaurantes();
+
+        DefaultComboBoxModel<Resto> model = new DefaultComboBoxModel<>(restaurantes.toArray(new Resto[0]));
+        mostrarresto.setModel(model);
+
+        mostrarresto.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e) {
+                Resto restauranteSeleccionado = (Resto) mostrarresto.getSelectedItem();
+                boolean isRestauranteSeleccionado = restauranteSeleccionado != null;
+                btnReserva.setEnabled(isRestauranteSeleccionado);
+                btnGestion.setEnabled(isRestauranteSeleccionado);
+                btnInformacion.setEnabled(isRestauranteSeleccionado);
+            }
+        });
     }
 }

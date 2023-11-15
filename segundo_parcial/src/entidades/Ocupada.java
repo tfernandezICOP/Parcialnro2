@@ -17,4 +17,9 @@ public class Ocupada implements Estado {
         // No se puede ocupar una mesa que ya está ocupada
         throw new RuntimeException("La mesa ya esta ocupada");
     }
+    
+    @Override
+    public String nombreEstado() {
+        return "ocupada";
+    }
 }

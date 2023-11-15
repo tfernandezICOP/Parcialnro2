@@ -16,4 +16,8 @@ public class Liberada implements Estado {
         
         throw new RuntimeException("La mesa no puede ser ocupada si esta liberada");
     }
+    @Override
+    public String nombreEstado() {
+        return "liberada";
+    }
 }

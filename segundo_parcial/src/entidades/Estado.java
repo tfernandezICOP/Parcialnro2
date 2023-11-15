@@ -7,6 +7,8 @@ public interface Estado {
 	    public void reservar(Mesa m);
 
 	    public void ocupar(Mesa m);
+	    
+	    String nombreEstado();
 
 	
 }

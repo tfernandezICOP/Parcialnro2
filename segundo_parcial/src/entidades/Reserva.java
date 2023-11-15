@@ -74,5 +74,5 @@ public class Reserva {
 		this.mesa = mesa;
 	}
     
-    
+	
 }
