@@ -7,14 +7,13 @@ public class Mesa {
 	private int consumo;
 	private Estado estado;
 	
-	public Mesa(int id_mesa, int nro_mesa, int capacidad, int consumo, Estado estado) {
-		super();
-		this.id_mesa = id_mesa;
-		this.nro_mesa = nro_mesa;
-		this.capacidad = capacidad;
-		this.consumo = consumo;
-		this.estado = estado;
-	}
+	 public Mesa(int id_mesa, int nro_mesa, int capacidad, int consumo, Estado estado) {
+	        this.id_mesa = id_mesa;
+	        this.nro_mesa = nro_mesa;
+	        this.capacidad = capacidad;
+	        this.consumo = consumo;
+	        this.estado = estado;
+	    }
 
 	public Mesa() {
 		super();
@@ -73,11 +72,9 @@ public class Mesa {
         estado.ocupar(this);
     }
 
-	@Override
-	public String toString() {
-		return "Mesa [nro_mesa=" + nro_mesa + ", capacidad=" + capacidad + ", consumo=" + consumo + ", estado=" + estado
-				+ "]";
-	}
+    public String toString() {
+        return "Mesa [nro_mesa=" + nro_mesa + ", capacidad=" + capacidad + ", consumo=" + consumo + ", estado=" + estado.getClass().getSimpleName() + "]";
+    }
 
 	
     
