@@ -5,6 +5,7 @@ import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -13,30 +14,39 @@ import entidades.Mesa;
 import entidades.Reserva;
 
 public class ReservaServic {
-    public void insertarReserva(Reserva reserva, int idMesaSeleccionada) {
-        AccesoBD accesoBD = new AccesoBD();
+	public void insertarReserva(Reserva reserva, int idMesaSeleccionada) {
+	    AccesoBD accesoBD = new AccesoBD();
 
-        try {
-            accesoBD.abrirConexion();
+	    try {
+	        accesoBD.abrirConexion();
 
-            String sql = "INSERT INTO reserva (nombreapellido, comensales, fecha, id_mesa) VALUES (?, ?, ?, ?)";
-            try (Connection conn = accesoBD.getCon();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, reserva.getNombreApellido());
-                stmt.setInt(2, reserva.getComensales());
-                stmt.setDate(3, new java.sql.Date(reserva.getFecha().getTime()));
-                stmt.setInt(4, idMesaSeleccionada); 
+	        String sql = "INSERT INTO reserva (nombreapellido, comensales, fecha, id_mesa) VALUES (?, ?, ?, ?)";
+	        try (Connection conn = accesoBD.getCon();
+	             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-                stmt.executeUpdate();
+	            stmt.setString(1, reserva.getNombreApellido());
+	            stmt.setInt(2, reserva.getComensales());
+	            stmt.setDate(3, new java.sql.Date(reserva.getFecha().getTime()));
+	            stmt.setInt(4, idMesaSeleccionada);
 
-                System.out.println("Reserva insertada correctamente.");
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            accesoBD.cerrarConexion();
-        }
-    }
+	            int filasAfectadas = stmt.executeUpdate();
+
+	            if (filasAfectadas > 0) {
+	                ResultSet generatedKeys = stmt.getGeneratedKeys();
+	                if (generatedKeys.next()) {
+	                    int idReservaGenerado = generatedKeys.getInt(1);
+	                    reserva.setId(idReservaGenerado);
+	                }
+	            }
+	        }
+	    } catch (SQLException e) {
+	        e.printStackTrace();
+	    } finally {
+	        accesoBD.cerrarConexion();
+	    }
+	}
+
+
 
     public List<Reserva> buscarMesasDisponibles(String nombreApellido, int comensales, Date fecha, int restauranteId) {
         List<Reserva> mesasDisponibles = new ArrayList<>();

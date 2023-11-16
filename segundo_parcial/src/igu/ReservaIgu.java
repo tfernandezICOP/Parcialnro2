@@ -1,7 +1,6 @@
 package igu;
 
 import java.awt.Color;
-import java.awt.EventQueue;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -44,6 +43,7 @@ public class ReservaIgu extends JFrame {
     private Mesa mesaSeleccionada;
     EstadoServic estadoServic = new EstadoServic();
     Reserva reserva = new Reserva();
+    MesaServic mesaServic = new MesaServic();
 
     public ReservaIgu(Resto restauranteSeleccionado) {
         this.restauranteSeleccionado = restauranteSeleccionado;
@@ -107,12 +107,8 @@ public class ReservaIgu extends JFrame {
 
         table = new JTable();
         table.setModel(new DefaultTableModel(
-        	new Object[][] {
-        	},
-        	new String[] {
-        		"N\u00B0 de mesa", "Capacidad", "Estado"
-        	}
-        ));
+                new Object[][] {},
+                new String[] { "N° de mesa", "Capacidad", "Estado" }));
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBounds(20, 180, 650, 150);
         panel.add(scrollPane);
@@ -144,19 +140,26 @@ public class ReservaIgu extends JFrame {
                 }
                 int selectedRow = table.getSelectedRow();
                 if (selectedRow != -1) {
-                    Object value = tableModel.getValueAt(selectedRow, 0);
-                    if (value != null) {
-                        int nroMesa = (int) value;
-                        int capacidad = (int) tableModel.getValueAt(selectedRow, 1);
+                    Object idMesaObject = tableModel.getValueAt(selectedRow, 0);
+                    if (idMesaObject != null) {
+                        try {
+                            int idMesa = Integer.parseInt(idMesaObject.toString());
+                            int capacidad = (int) tableModel.getValueAt(selectedRow, 1);
 
-                        mesaSeleccionada = new Mesa();
-                        mesaSeleccionada.setNro_mesa(nroMesa);
-                        mesaSeleccionada.setCapacidad(capacidad);
-                        mesaSeleccionada.setEstado(estadoServic.obtenerEstadoPorNombre("Reservada"));
+                            mesaSeleccionada = new Mesa();
+                            mesaSeleccionada.setId_mesa(idMesa);
+                            mesaSeleccionada.setNro_mesa(idMesa); 
+                            mesaSeleccionada.setCapacidad(capacidad);
+                            mesaSeleccionada.setEstado(estadoServic.obtenerEstadoPorNombre("Reservada"));
+                        } catch (NumberFormatException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }
             }
         });
+
+
 
     }
 
@@ -173,7 +176,6 @@ public class ReservaIgu extends JFrame {
             e.printStackTrace();
         }
 
-        MesaServic mesaServic = new MesaServic();
 
         int idRestaurante = restauranteSeleccionado.getIdResto();
 
@@ -181,12 +183,15 @@ public class ReservaIgu extends JFrame {
 
         if (!mesasDisponibles.isEmpty()) {
             for (Mesa mesa : mesasDisponibles) {
-                if (!mesaEstaReservada(mesa, fecha)) {
+                if (mesaSeleccionada == null && !mesaEstaReservada(mesa, fecha)) {
                     mesaSeleccionada = mesa;
-                    mesaSeleccionada.setId_mesa(mesaServic.obtenerMesaPorId(mesaSeleccionada.getNro_mesa()).getId_mesa());
                     break;
                 }
             }
+        }
+
+        if (mesaSeleccionada != null) {
+            mesaSeleccionada.setId_mesa(mesaServic.obtenerMesaPorId(mesaSeleccionada.getNro_mesa()).getId_mesa());
         }
 
         actualizarTabla(mesasDisponibles);
@@ -198,22 +203,17 @@ public class ReservaIgu extends JFrame {
         return !reservas.isEmpty();
     }
 
-
-
-
     private void actualizarTabla(List<Mesa> mesas) {
-        tableModel.setRowCount(0);  
+        tableModel.setRowCount(0);
 
         for (Mesa mesa : mesas) {
             Estado estado = mesa.getEstado();
-
-            tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), estado.nombreEstado()});
+            tableModel.addRow(new Object[] { mesa.getNro_mesa(), mesa.getCapacidad(), estado.nombreEstado() });
         }
     }
 
-
     private void guardarReserva() {
-        if (mesaSeleccionada != null) {
+        if (mesaSeleccionada != null && mesaSeleccionada.getId_mesa() != 0) {
             int selectedRow = table.getSelectedRow();
             tableModel.setValueAt(mesaSeleccionada.getEstado().nombreEstado(), selectedRow, 2);
 
@@ -232,12 +232,10 @@ public class ReservaIgu extends JFrame {
             reserva.setMesa(mesaSeleccionada);
 
             ReservaServic reservaServic = new ReservaServic();
-            reservaServic.insertarReserva(reserva, restauranteSeleccionado.getIdResto());
+            System.out.println("ID de la mesa seleccionada: " + mesaSeleccionada.getId_mesa());
+            reservaServic.insertarReserva(reserva, mesaSeleccionada.getId_mesa());
         } else {
-            System.out.println(
-                    "La mesa seleccionada no es válida. Asegúrate de que la mesa tenga un ID válido.");
+            System.out.println("La mesa seleccionada no es válida. Asegúrate de que la mesa tenga un ID válido.");
         }
     }
-
-   
 }

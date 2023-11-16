@@ -395,7 +395,6 @@ public class Resto {
             SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy");
             Date fecha = dateFormat.parse(fechaStr);
 
-            // Obtener las mesas en el estado y fecha proporcionados
             List<Mesa> mesasEnEstadoYFecha = mesasPorEstadoYFecha(estado, fecha);
 
             if (mesasEnEstadoYFecha.isEmpty()) {
@@ -433,7 +432,7 @@ public class Resto {
         } else if (estado instanceof Ocupada) {
             return 3;
         } else {
-            return 0;  // Opción no válida
+            return 0;  
         }
     }
     
