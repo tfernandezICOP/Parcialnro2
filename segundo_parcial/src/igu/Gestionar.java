@@ -88,6 +88,7 @@ public class Gestionar extends JFrame {
 
                     darDeBajaMesa(numeroMesa);
 
+                    // Actualizar tabla después de dar de baja una mesa
                     actualizarTablaMesasLiberadas();
                 }
             }
@@ -131,10 +132,16 @@ public class Gestionar extends JFrame {
         for (Mesa mesa : mesasLiberadas) {
             tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), mesa.getEstado().nombreEstado()});
         }
+
+        tableModel.fireTableDataChanged();
     }
+
 
     private void darDeBajaMesa(int numeroMesa) {
         MesaServic mesaServic = new MesaServic();
         mesaServic.darDeBajaMesa(numeroMesa);
+
+        // Línea añadida para actualizar la tabla después de dar de baja una mesa
+        actualizarTablaMesasLiberadas();
     }
 }

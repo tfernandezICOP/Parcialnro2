@@ -1,15 +1,15 @@
 package igu;
 
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.sql.Date;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
+
 import javax.swing.JButton;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
@@ -21,8 +21,11 @@ import javax.swing.JTable;
 import javax.swing.border.EmptyBorder;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.text.MaskFormatter;
+
+import entidades.Estado;
 import entidades.Mesa;
 import entidades.Resto;
 import servicio.MesaServic;
@@ -34,8 +37,8 @@ public class Informacion extends JFrame {
     private JTable table;
     private Resto restauranteSeleccionado;
     private JFormattedTextField formattedTextField;
-    private Mesa mesaSeleccionada; 
-    MesaServic mesaServic = new MesaServic(); 
+    private Mesa mesaSeleccionada;
+    MesaServic mesaServic = new MesaServic();
 
     public Informacion(Resto restauranteSeleccionado) {
         this.restauranteSeleccionado = restauranteSeleccionado;
@@ -67,17 +70,8 @@ public class Informacion extends JFrame {
                 mostrarAcercaDe();
             }
         });
-        btnAcercaDe.setBounds(580, 47, 150, 30);
+        btnAcercaDe.setBounds(646, 47, 104, 30);
         panel.add(btnAcercaDe);
-
-        JButton btnSalir = new JButton("Salir");
-        btnSalir.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                dispose();
-            }
-        });
-        btnSalir.setBounds(700, 400, 80, 30);
-        panel.add(btnSalir);
 
         JButton btnVistaFecha = new JButton("Vista x fecha");
         btnVistaFecha.addActionListener(new ActionListener() {
@@ -90,12 +84,20 @@ public class Informacion extends JFrame {
 
         JLabel lblInformacion = new JLabel("Informacion");
         lblInformacion.setFont(new Font("Arial", Font.BOLD, 24));
-        lblInformacion.setBounds(10, 0, 764, 40);
+        lblInformacion.setBounds(10, 0, 283, 40);
         panel.add(lblInformacion);
+
+        JLabel lblNombreResto = new JLabel("Nombre: " + restauranteSeleccionado.getNombre());
+        lblNombreResto.setBounds(303, 14, 300, 20);
+        panel.add(lblNombreResto);
+
+        JLabel lblDomicilioResto = new JLabel("Domicilio: " + restauranteSeleccionado.getDomicilio());
+        lblDomicilioResto.setBounds(303, 45, 300, 20);
+        panel.add(lblDomicilioResto);
 
         table = new JTable();
         JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setBounds(50, 160, 700, 200);
+        scrollPane.setBounds(50, 154, 700, 200);
         panel.add(scrollPane);
 
         try {
@@ -111,15 +113,14 @@ public class Informacion extends JFrame {
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
         table.setRowHeight(30);
         table.setBackground(Color.WHITE);
-
         DefaultTableModel tableModel = new DefaultTableModel();
-        tableModel.addColumn("Nombre");
-        tableModel.addColumn("Domicilio");
-        tableModel.addColumn("Localidad");
         tableModel.addColumn("Nro. Mesa");
         tableModel.addColumn("Capacidad");
         tableModel.addColumn("Estado");
         table.setModel(tableModel);
+
+        // Configurar el renderizador para la columna de Estado
+        table.getColumnModel().getColumn(2).setCellRenderer(new EstadoMesaRenderer());
 
         JButton btnLiberar = new JButton("Liberar");
         btnLiberar.setBounds(435, 400, 150, 30);
@@ -147,35 +148,51 @@ public class Informacion extends JFrame {
         });
         btnReservar.setBounds(69, 400, 150, 30);
         panel.add(btnReservar);
+        
+        JButton btnSalir = new JButton("Salir");
+        btnSalir.addActionListener(new ActionListener() {
+        	public void actionPerformed(ActionEvent e) {
+        		dispose();
+        	}
+        });
+        btnSalir.setBounds(646, 400, 104, 30);
+        panel.add(btnSalir);
 
         table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent event) {
-                if (event.getValueIsAdjusting() || table.getSelectedRowCount() == 0) {
-                    return;
-                }
-                int selectedRow = table.getSelectedRow();
-                if (selectedRow != -1) {
-                    Object idMesaObject = tableModel.getValueAt(selectedRow, 3);
-                    if (idMesaObject != null) {
-                        try {
-                            if (idMesaObject.toString().matches("\\d+")) {
-                                int idMesa = Integer.parseInt(idMesaObject.toString());
-                                int capacidad = (int) tableModel.getValueAt(selectedRow, 4);
-
-                                mesaSeleccionada = new Mesa();
-                                mesaSeleccionada.setId_mesa(idMesa);
-                                mesaSeleccionada.setNro_mesa(idMesa);
-                                mesaSeleccionada.setCapacidad(capacidad);
-                            } else {
-                                System.out.println("El valor no es un número.");
-                            }
-                        } catch (NumberFormatException e) {
-                            e.printStackTrace();
-                        }
-                    }
+                if (!event.getValueIsAdjusting() && table.getSelectedRowCount() > 0) {
+                    int selectedRow = table.getSelectedRow();
+                    mesaSeleccionada = obtenerMesaDesdeFila(selectedRow);
                 }
             }
         });
+    }
+
+    private Mesa obtenerMesaDesdeFila(int fila) {
+        DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
+        Object idMesaObject = tableModel.getValueAt(fila, 0);
+
+        if (idMesaObject != null) {
+            try {
+                if (idMesaObject.toString().matches("\\d+")) {
+                    int idMesa = Integer.parseInt(idMesaObject.toString());
+                    int capacidad = (int) tableModel.getValueAt(fila, 1);
+
+                    Mesa mesa = new Mesa();
+                    mesa.setId_mesa(idMesa);
+                    mesa.setNro_mesa(idMesa);
+                    mesa.setCapacidad(capacidad);
+
+                    return mesa;
+                } else {
+                    System.out.println("El valor no es un número.");
+                }
+            } catch (NumberFormatException ex) {
+                ex.printStackTrace();
+            }
+        }
+
+        return null;
     }
 
     private void mostrarAcercaDe() {
@@ -183,23 +200,25 @@ public class Informacion extends JFrame {
         JOptionPane.showMessageDialog(this, mensaje, "Acerca de", JOptionPane.INFORMATION_MESSAGE);
     }
 
+    private void actualizarTabla(List<Mesa> mesas) {
+        DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
+        tableModel.setRowCount(0);
+
+        for (Mesa mesa : mesas) {
+            Estado estado = mesa.getEstado();
+            tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), estado.nombreEstado()});
+        }
+    }
+
     private void mostrarVistaActual() {
         int idResto = restauranteSeleccionado.getIdResto();
-        String nombreResto = restauranteSeleccionado.getNombre();
-        String domicilioResto = restauranteSeleccionado.getDomicilio();
-        String localidadResto = restauranteSeleccionado.getLocalidad();
 
         DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
         tableModel.setRowCount(0);
 
-        tableModel.addRow(new Object[] { nombreResto, domicilioResto, localidadResto, "Nro. Mesa", "Capacidad", "Estado" });
-
         List<Mesa> mesasRestaurante = mesaServic.obtenerTodasLasMesasPorRestaurante(idResto);
 
-        for (Mesa mesa : mesasRestaurante) {
-            String nombreEstado = mesa.getEstado().nombreEstado();
-            tableModel.addRow(new Object[] { nombreResto, domicilioResto, localidadResto, mesa.getNro_mesa(), mesa.getCapacidad(), nombreEstado });
-        }
+        actualizarTabla(mesasRestaurante);
     }
 
     private void mostrarMesasDisponiblesParaFecha() {
@@ -208,55 +227,100 @@ public class Informacion extends JFrame {
             SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
             Date fecha = new Date(sdf.parse(fechaStr).getTime());
             int idResto = restauranteSeleccionado.getIdResto();
-            String nombreResto = restauranteSeleccionado.getNombre();
-            String domicilioResto = restauranteSeleccionado.getDomicilio();
-            String localidadResto = restauranteSeleccionado.getLocalidad();
 
             DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
             tableModel.setRowCount(0);
 
-            tableModel.addRow(new Object[] { nombreResto, domicilioResto, localidadResto, "Nro. Mesa", "Capacidad", "Estado" });
+            List<Mesa> todasLasMesas = mesaServic.obtenerTodasLasMesasPorRestaurante(idResto);
 
-            List<Mesa> mesasDisponibles = mesaServic.obtenerMesasDisponiblesParaFecha(idResto, fecha);
+            for (Mesa mesa : todasLasMesas) {
+                String estadoMesa = mesa.getEstado().nombreEstado();
 
-            for (Mesa mesa : mesasDisponibles) {
-                String nombreEstado = mesa.getEstado().nombreEstado();
-                tableModel.addRow(new Object[] { nombreResto, domicilioResto, localidadResto, mesa.getNro_mesa(), mesa.getCapacidad(), nombreEstado });
+                boolean tieneReserva = mesaServic.tieneReservaEnFecha(mesa.getId_mesa(), fecha);
+                boolean esOcupada = "ocupada".equals(estadoMesa);
+
+                if (tieneReserva && esOcupada) {
+                    tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), "ocupada"});
+                } else if (tieneReserva) {
+                    tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), "reservada"});
+                } else if ("liberada".equals(estadoMesa)) {
+                    tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), estadoMesa});
+                }
             }
         } catch (ParseException ex) {
             ex.printStackTrace();
         }
     }
 
-    public void reservarMesa() {
+    private void reservarMesa() {
         if (mesaSeleccionada != null) {
             if (mesaServic.puedeReservarMesa(mesaSeleccionada.getId_mesa())) {
                 mesaServic.reservarMesa(mesaSeleccionada.getId_mesa());
                 cambiarEstadoYActualizarVista();
+            } else {
+                JOptionPane.showMessageDialog(this, "No se puede reservar la mesa.", "Error", JOptionPane.ERROR_MESSAGE);
             }
-            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Selecciona una mesa antes de reservar.", "Error", JOptionPane.ERROR_MESSAGE);
         }
+    }
 
-    public void liberarMesa() {
+    private void liberarMesa() {
         if (mesaSeleccionada != null) {
             if (mesaServic.puedeLiberarMesa(mesaSeleccionada.getId_mesa())) {
                 mesaServic.liberarMesa(mesaSeleccionada.getId_mesa());
                 cambiarEstadoYActualizarVista();
+            } else {
+                JOptionPane.showMessageDialog(this, "No se puede liberar la mesa.", "Error", JOptionPane.ERROR_MESSAGE);
             }
+        } else {
+            JOptionPane.showMessageDialog(this, "Selecciona una mesa antes de liberar.", "Error", JOptionPane.ERROR_MESSAGE);
         }
-        }
+    }
 
-    public void ocuparMesa() {
+    private void ocuparMesa() {
         if (mesaSeleccionada != null) {
             if (mesaServic.puedeOcuparMesa(mesaSeleccionada.getId_mesa())) {
                 mesaServic.ocuparMesa(mesaSeleccionada.getId_mesa());
                 cambiarEstadoYActualizarVista();
-           
+            } else {
+                JOptionPane.showMessageDialog(this, "No se puede ocupar la mesa.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } else {
+            JOptionPane.showMessageDialog(this, "Selecciona una mesa antes de ocupar.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
-        }
-        }
+
     private void cambiarEstadoYActualizarVista() {
         mostrarVistaActual();
     }
 
+    private class EstadoMesaRenderer extends DefaultTableCellRenderer {
+
+        private static final long serialVersionUID = 1L;
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus,
+                int row, int column) {
+            Component cellComponent = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            String estado = ((String) table.getValueAt(row, 2)).toLowerCase();
+
+            switch (estado) {
+                case "liberada":
+                    cellComponent.setBackground(Color.GREEN);
+                    break;
+                case "reservada":
+                    cellComponent.setBackground(Color.YELLOW);
+                    break;
+                case "ocupada":
+                    cellComponent.setBackground(Color.RED);
+                    break;
+                default:
+                    cellComponent.setBackground(table.getBackground());
+            }
+
+            return cellComponent;
+        }
+    }
 }

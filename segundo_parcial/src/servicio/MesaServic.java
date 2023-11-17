@@ -27,7 +27,7 @@ public class MesaServic {
         try {
             accesoBD.abrirConexion();
 
-            String sql = "SELECT * FROM mesa WHERE estado = 'Liberada' AND capacidad >= ? AND idresto = ?";
+            String sql = "SELECT * FROM mesa WHERE LOWER(estado) = 'liberada' AND capacidad >= ? AND idresto = ?";
             try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
                 stmt.setInt(1, capacidad);
@@ -49,7 +49,6 @@ public class MesaServic {
 
                     mesasLiberadas.add(mesa);
                 }
-
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -59,6 +58,7 @@ public class MesaServic {
 
         return mesasLiberadas;
     }
+
 
     public Mesa obtenerMesaPorId(int idMesa) {
         Mesa mesa = null;
@@ -98,45 +98,7 @@ public class MesaServic {
         return mesa;
     }
 
-    public List<Mesa> obtenerTodasLasMesasLiberadasPorRestaurante(int idRestaurante) {
-        List<Mesa> mesasLiberadas = new ArrayList<>();
-        AccesoBD accesoBD = new AccesoBD();
-
-        try {
-            accesoBD.abrirConexion();
-
-            String sql = "SELECT mesa.* FROM mesa LEFT JOIN reserva ON mesa.id = reserva.id_mesa "
-                    + "WHERE mesa.estado = 'Liberada' AND mesa.idresto = ? AND reserva.id_mesa IS NULL";
-            try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-                stmt.setInt(1, idRestaurante);
-
-                ResultSet rs = stmt.executeQuery();
-
-                while (rs.next()) {
-                    int numeroMesa = rs.getInt("nro_mesa");
-                    int capacidadMesa = rs.getInt("capacidad");
-                    String estadoNombre = rs.getString("estado");
-
-                    Estado estado = estadoservic.obtenerEstadoPorNombre(estadoNombre);
-
-                    Mesa mesa = new Mesa();
-                    mesa.setNro_mesa(numeroMesa);
-                    mesa.setCapacidad(capacidadMesa);
-                    mesa.setEstado(estado);
-
-                    mesasLiberadas.add(mesa);
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            accesoBD.cerrarConexion();
-        }
-
-        return mesasLiberadas;
-    }
-
+    
     public void insertarMesa(Mesa mesa) {
         AccesoBD accesoBD = new AccesoBD();
 
@@ -227,82 +189,7 @@ public class MesaServic {
         return todasLasMesas;
     }
 
-    public static Mesa obtenerMesaPorId(Connection connection, int mesaId) {
-        Mesa mesa = null;
-        EstadoServic estadoServic = new EstadoServic();
-
-        try {
-            String sql = "SELECT * FROM mesa WHERE id_mesa = ?";
-
-            try (PreparedStatement statement = connection.prepareStatement(sql)) {
-                statement.setInt(1, mesaId);
-
-                try (ResultSet resultSet = statement.executeQuery()) {
-                    if (resultSet.next()) {
-                        int id_mesa = resultSet.getInt("id_mesa");
-                        int nro_mesa = resultSet.getInt("nro_mesa");
-                        int capacidad = resultSet.getInt("capacidad");
-                        int consumo = resultSet.getInt("consumo");
-                        String estadoNombre = resultSet.getString("estado");
-
-                        Estado estado = estadoServic.obtenerEstadoPorNombre(estadoNombre);
-
-                        mesa = new Mesa();
-                        mesa.setId_mesa(id_mesa);
-                        mesa.setNro_mesa(nro_mesa);
-                        mesa.setCapacidad(capacidad);
-                        mesa.setEstado(estado);
-                    }
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
-        return mesa;
-    }
-
-    public List<Mesa> obtenerMesasDisponiblesParaFecha(int idRestaurante, Date fecha) {
-        List<Mesa> mesasDisponibles = new ArrayList<>();
-        AccesoBD accesoBD = new AccesoBD();
-
-        try {
-            accesoBD.abrirConexion();
-
-            String sql = "SELECT m.* FROM mesa m " + "LEFT JOIN reserva r ON m.id = r.id_mesa AND r.fecha = ? "
-                    + "WHERE m.idresto = ? AND r.id_mesa IS NULL";
-
-            try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-                stmt.setDate(1, fecha);
-                stmt.setInt(2, idRestaurante);
-
-                ResultSet rs = stmt.executeQuery();
-
-                while (rs.next()) {
-                    int numeroMesa = rs.getInt("nro_mesa");
-                    int capacidadMesa = rs.getInt("capacidad");
-                    String estadoNombre = rs.getString("estado");
-
-                    Estado estado = estadoservic.obtenerEstadoPorNombre(estadoNombre);
-
-                    Mesa mesa = new Mesa();
-                    mesa.setNro_mesa(numeroMesa);
-                    mesa.setCapacidad(capacidadMesa);
-                    mesa.setEstado(estado);
-
-                    mesasDisponibles.add(mesa);
-                }
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            accesoBD.cerrarConexion();
-        }
-
-        return mesasDisponibles;
-    }
-
+   
     public boolean esIdMesaValido(int idMesa) {
         return idMesa > 0 && existeMesaConId(idMesa);
     }
@@ -314,9 +201,7 @@ public class MesaServic {
 
     public boolean puedeReservarMesa(int idMesa) {
         Mesa mesa = obtenerMesaPorId(idMesa);
-        Estado estadoLiberada = estadoservic.obtenerEstadoPorNombre("liberada");
-
-        return mesa != null && mesa.getEstado() != null && estadoLiberada.equals(mesa.getEstado());
+        return mesa != null && mesa.getEstado() != null && "liberada".equals(mesa.getEstado().nombreEstado());
     }
 
     public void reservarMesa(int idMesa) {
@@ -324,12 +209,10 @@ public class MesaServic {
             cambiarEstadoMesa(idMesa, "reservada");
         }
     }
-
     public boolean puedeOcuparMesa(int idMesa) {
         Mesa mesa = obtenerMesaPorId(idMesa);
-        return mesa != null && mesa.getEstado().equals(estadoservic.obtenerEstadoPorNombre("reservada"));
+        return mesa != null && "reservada".equals(mesa.getEstado().nombreEstado());
     }
-
     public void ocuparMesa(int idMesa) {
         if (puedeOcuparMesa(idMesa)) {
             cambiarEstadoMesa(idMesa, "ocupada");
@@ -338,9 +221,8 @@ public class MesaServic {
 
     public boolean puedeLiberarMesa(int idMesa) {
         Mesa mesa = obtenerMesaPorId(idMesa);
-        return mesa != null && mesa.getEstado().equals(estadoservic.obtenerEstadoPorNombre("ocupada"));
+        return mesa != null && "ocupada".equals(mesa.getEstado().nombreEstado());
     }
-
     public void liberarMesa(int idMesa) {
         if (puedeLiberarMesa(idMesa)) {
             cambiarEstadoMesa(idMesa, "liberada");
@@ -359,10 +241,16 @@ public class MesaServic {
                 String sql = "UPDATE mesa SET estado = ? WHERE id = ?";
                 try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-                    stmt.setString(1, nombreEstado.toLowerCase()); // Cambiar a minúsculas
+                    stmt.setString(1, nombreEstado);
                     stmt.setInt(2, idMesa);
 
-                    stmt.executeUpdate();
+                    int filasAfectadas = stmt.executeUpdate();
+
+                    if (filasAfectadas > 0) {
+                        System.out.println("Estado de la mesa actualizado correctamente.");
+                    } else {
+                        System.out.println("No se encontró la mesa con el ID proporcionado.");
+                    }
                 }
             } catch (SQLException e) {
                 e.printStackTrace();
@@ -374,29 +262,75 @@ public class MesaServic {
         }
     }
 
-    public void cambiarEstadoMesaPorNombre(int idMesa, String nombreEstado) {
-        if (nombreEstado != null) {
-            AccesoBD accesoBD = new AccesoBD();
+    public List<Mesa> obtenerTodasLasMesasLiberadasPorRestaurante(int idRestaurante) {
+        List<Mesa> mesasLiberadas = new ArrayList<>();
+        AccesoBD accesoBD = new AccesoBD();
 
-            try {
-                accesoBD.abrirConexion();
+        try {
+            accesoBD.abrirConexion();
 
-                String sql = "UPDATE mesa SET estado = ? WHERE id = ?";
-                try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+            String sql = "SELECT * FROM mesa WHERE LOWER(estado) = 'liberada' AND idresto = ?";
+            try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-                    stmt.setString(1, nombreEstado.toLowerCase()); 
-                    stmt.setInt(2, idMesa);
+                stmt.setInt(1, idRestaurante);
 
-                    stmt.executeUpdate();
+                ResultSet rs = stmt.executeQuery();
+
+                while (rs.next()) {
+                    int numeroMesa = rs.getInt("nro_mesa");
+                    int capacidadMesa = rs.getInt("capacidad");
+                    String estadoNombre = rs.getString("estado");
+
+                    Estado estado = estadoservic.obtenerEstadoPorNombre(estadoNombre);
+
+                    Mesa mesa = new Mesa();
+                    mesa.setNro_mesa(numeroMesa);
+                    mesa.setCapacidad(capacidadMesa);
+                    mesa.setEstado(estado);
+
+                    mesasLiberadas.add(mesa);
                 }
-            } catch (SQLException e) {
-                e.printStackTrace();
-            } finally {
-                accesoBD.cerrarConexion();
             }
-        } else {
-            System.out.println("El nuevo estado es nulo. No se puede cambiar el estado de la mesa.");
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            accesoBD.cerrarConexion();
         }
+
+        return mesasLiberadas;
     }
+
+    public boolean tieneReservaEnFecha(int idMesa, Date fecha) {
+        boolean tieneReserva = false;
+        AccesoBD accesoBD = new AccesoBD();
+
+        try {
+            accesoBD.abrirConexion();
+
+            String sql = "SELECT COUNT(*) AS totalReservas FROM reserva WHERE id_mesa = ? AND fecha = ?";
+            try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setInt(1, idMesa);
+                stmt.setDate(2, fecha);
+
+                try (ResultSet rs = stmt.executeQuery()) {
+                    if (rs.next()) {
+                        int totalReservas = rs.getInt("totalReservas");
+                        tieneReserva = totalReservas > 0;
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            accesoBD.cerrarConexion();
+        }
+
+        return tieneReserva;
+    }
+
+
+
+    
 
 }

@@ -44,7 +44,6 @@ public class ReservaIgu extends JFrame {
     EstadoServic estadoServic = new EstadoServic();
     Reserva reserva = new Reserva();
     MesaServic mesaServic = new MesaServic();
-
     public ReservaIgu(Resto restauranteSeleccionado) {
         this.restauranteSeleccionado = restauranteSeleccionado;
 
@@ -176,10 +175,11 @@ public class ReservaIgu extends JFrame {
             e.printStackTrace();
         }
 
-
         int idRestaurante = restauranteSeleccionado.getIdResto();
 
         List<Mesa> mesasDisponibles = mesaServic.obtenerMesasLiberadasConCapacidadPorRestaurante(comensales, idRestaurante);
+
+        mesaSeleccionada = null;
 
         if (!mesasDisponibles.isEmpty()) {
             for (Mesa mesa : mesasDisponibles) {
@@ -196,7 +196,6 @@ public class ReservaIgu extends JFrame {
 
         actualizarTabla(mesasDisponibles);
     }
-
     private boolean mesaEstaReservada(Mesa mesa, Date fecha) {
         ReservaServic reservaServic = new ReservaServic();
         List<Reserva> reservas = reservaServic.buscarReservasPorMesaYFecha(mesa.getId_mesa(), fecha);
@@ -208,7 +207,7 @@ public class ReservaIgu extends JFrame {
 
         for (Mesa mesa : mesas) {
             Estado estado = mesa.getEstado();
-            tableModel.addRow(new Object[] { mesa.getNro_mesa(), mesa.getCapacidad(), estado.nombreEstado() });
+            tableModel.addRow(new Object[] {mesa.getNro_mesa(), mesa.getCapacidad(), estado.nombreEstado() });
         }
     }
 
