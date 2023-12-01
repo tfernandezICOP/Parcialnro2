@@ -2,6 +2,7 @@ package entidades;
 
 import java.util.Scanner;
 
+import igu.InicializarResto;
 import igu.Menu;
 
 public class Main {
@@ -23,8 +24,9 @@ public class Main {
 
     public static void main(String[] args) {
         Scanner sc = new Scanner(System.in);
-        Menu menu = new Menu();
-        menu.setVisible(true);
+        InicializarResto inicio = new InicializarResto();
+        inicio.setVisible(true);
+        		
         
         
         

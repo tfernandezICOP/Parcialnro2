@@ -6,12 +6,10 @@ import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.sql.Date;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.util.Calendar;
 import java.util.List;
 
 import javax.swing.JButton;
-import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -23,7 +21,6 @@ import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.text.MaskFormatter;
 
 import entidades.Estado;
 import entidades.Mesa;
@@ -36,12 +33,13 @@ public class Informacion extends JFrame {
     private JPanel contentPane;
     private JTable table;
     private Resto restauranteSeleccionado;
-    private JFormattedTextField formattedTextField;
     private Mesa mesaSeleccionada;
-    MesaServic mesaServic = new MesaServic();
+    private MesaServic mesaServic = new MesaServic();
+    private Menu menu;
 
-    public Informacion(Resto restauranteSeleccionado) {
+    public Informacion(Resto restauranteSeleccionado, Menu menu) {
         this.restauranteSeleccionado = restauranteSeleccionado;
+        this.menu = menu;
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBounds(100, 100, 800, 500);
@@ -55,15 +53,6 @@ public class Informacion extends JFrame {
         contentPane.add(panel);
         panel.setLayout(null);
 
-        JButton btnVistaActual = new JButton("Vista actual");
-        btnVistaActual.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e) {
-                mostrarVistaActual();
-            }
-        });
-        btnVistaActual.setBounds(50, 47, 150, 30);
-        panel.add(btnVistaActual);
-
         JButton btnAcercaDe = new JButton("Acerca de");
         btnAcercaDe.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
@@ -73,16 +62,16 @@ public class Informacion extends JFrame {
         btnAcercaDe.setBounds(646, 47, 104, 30);
         panel.add(btnAcercaDe);
 
-        JButton btnVistaFecha = new JButton("Vista x fecha");
+        JButton btnVistaFecha = new JButton("Buscar");
         btnVistaFecha.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                mostrarMesasDisponiblesParaFecha();
+                mostrarMesasDisponiblesParaFechaActual();
             }
         });
-        btnVistaFecha.setBounds(50, 113, 150, 30);
+        btnVistaFecha.setBounds(144, 87, 150, 30);
         panel.add(btnVistaFecha);
 
-        JLabel lblInformacion = new JLabel("Informacion");
+        JLabel lblInformacion = new JLabel("Informacion Actual");
         lblInformacion.setFont(new Font("Arial", Font.BOLD, 24));
         lblInformacion.setBounds(10, 0, 283, 40);
         panel.add(lblInformacion);
@@ -100,15 +89,6 @@ public class Informacion extends JFrame {
         scrollPane.setBounds(50, 154, 700, 200);
         panel.add(scrollPane);
 
-        try {
-            MaskFormatter dateMask = new MaskFormatter("##/##/####");
-            formattedTextField = new JFormattedTextField(dateMask);
-            formattedTextField.setBounds(210, 114, 150, 30);
-            panel.add(formattedTextField);
-        } catch (ParseException e) {
-            e.printStackTrace();
-        }
-
         table.setFont(new Font("Arial", Font.PLAIN, 14));
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 14));
         table.setRowHeight(30);
@@ -119,7 +99,6 @@ public class Informacion extends JFrame {
         tableModel.addColumn("Estado");
         table.setModel(tableModel);
 
-        // Configurar el renderizador para la columna de Estado
         table.getColumnModel().getColumn(2).setCellRenderer(new EstadoMesaRenderer());
 
         JButton btnLiberar = new JButton("Liberar");
@@ -148,15 +127,20 @@ public class Informacion extends JFrame {
         });
         btnReservar.setBounds(69, 400, 150, 30);
         panel.add(btnReservar);
-        
-        JButton btnSalir = new JButton("Salir");
+
+        JButton btnSalir = new JButton("Volver");
         btnSalir.addActionListener(new ActionListener() {
-        	public void actionPerformed(ActionEvent e) {
-        		dispose();
-        	}
+            public void actionPerformed(ActionEvent e) {
+                dispose();
+                menu.setVisible(true);
+            }
         });
         btnSalir.setBounds(646, 400, 104, 30);
         panel.add(btnSalir);
+
+        JLabel lblNewLabel = new JLabel("Vista Actual:");
+        lblNewLabel.setBounds(50, 87, 84, 30);
+        panel.add(lblNewLabel);
 
         table.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             public void valueChanged(ListSelectionEvent event) {
@@ -221,36 +205,28 @@ public class Informacion extends JFrame {
         actualizarTabla(mesasRestaurante);
     }
 
-    private void mostrarMesasDisponiblesParaFecha() {
-        try {
-            String fechaStr = formattedTextField.getText();
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-            Date fecha = new Date(sdf.parse(fechaStr).getTime());
-            int idResto = restauranteSeleccionado.getIdResto();
 
-            DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
-            tableModel.setRowCount(0);
+    private void mostrarMesasDisponiblesParaFechaActual() {
+        int idResto = restauranteSeleccionado.getIdResto();
 
-            List<Mesa> todasLasMesas = mesaServic.obtenerTodasLasMesasPorRestaurante(idResto);
+        DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
+        tableModel.setRowCount(0);
 
-            for (Mesa mesa : todasLasMesas) {
-                String estadoMesa = mesa.getEstado().nombreEstado();
+        List<Mesa> todasLasMesas = mesaServic.obtenerTodasLasMesasPorRestaurante(idResto);
 
-                boolean tieneReserva = mesaServic.tieneReservaEnFecha(mesa.getId_mesa(), fecha);
-                boolean esOcupada = "ocupada".equals(estadoMesa);
+        for (Mesa mesa : todasLasMesas) {
+            String estadoMesa = mesa.getEstado().nombreEstado();
 
-                if (tieneReserva && esOcupada) {
-                    tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), "ocupada"});
-                } else if (tieneReserva) {
-                    tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), "reservada"});
-                } else if ("liberada".equals(estadoMesa)) {
-                    tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), estadoMesa});
-                }
+            if ("ocupada".equals(estadoMesa)) {
+                tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), "ocupada"});
+            } else if ("liberada".equals(estadoMesa)) {
+                tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), estadoMesa});
+            } else {
+                tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), estadoMesa});
             }
-        } catch (ParseException ex) {
-            ex.printStackTrace();
         }
     }
+
 
     private void reservarMesa() {
         if (mesaSeleccionada != null) {
@@ -292,7 +268,21 @@ public class Informacion extends JFrame {
     }
 
     private void cambiarEstadoYActualizarVista() {
+        int idMesaSeleccionada = (mesaSeleccionada != null) ? mesaSeleccionada.getId_mesa() : -1;
+
         mostrarVistaActual();
+
+        seleccionarFilaPorIdMesa(idMesaSeleccionada);
+    }
+
+    private void seleccionarFilaPorIdMesa(int idMesa) {
+        for (int i = 0; i < table.getRowCount(); i++) {
+            int nroMesa = (int) table.getValueAt(i, 0);
+            if (nroMesa == idMesa) {
+                table.setRowSelectionInterval(i, i);
+                return;
+            }
+        }
     }
 
     private class EstadoMesaRenderer extends DefaultTableCellRenderer {

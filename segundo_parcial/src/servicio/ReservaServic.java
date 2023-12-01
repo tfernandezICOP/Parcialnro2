@@ -10,77 +10,60 @@ import java.util.ArrayList;
 import java.util.List;
 
 import entidades.AccesoBD;
+import entidades.Estado;
 import entidades.Mesa;
 import entidades.Reserva;
 
 public class ReservaServic {
-	public void insertarReserva(Reserva reserva, int idMesaSeleccionada) {
-	    AccesoBD accesoBD = new AccesoBD();
 
-	    try {
-	        accesoBD.abrirConexion();
+    private EstadoServic estadoservic;  
+    public ReservaServic(EstadoServic estadoservic) {
+        this.estadoservic = estadoservic;
+    }
+    
 
-	        String sql = "INSERT INTO reserva (nombreapellido, comensales, fecha, id_mesa) VALUES (?, ?, ?, ?)";
-	        try (Connection conn = accesoBD.getCon();
-	             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
-	            stmt.setString(1, reserva.getNombreApellido());
-	            stmt.setInt(2, reserva.getComensales());
-	            stmt.setDate(3, new java.sql.Date(reserva.getFecha().getTime()));
-	            stmt.setInt(4, idMesaSeleccionada);
-
-	            int filasAfectadas = stmt.executeUpdate();
-
-	            if (filasAfectadas > 0) {
-	                ResultSet generatedKeys = stmt.getGeneratedKeys();
-	                if (generatedKeys.next()) {
-	                    int idReservaGenerado = generatedKeys.getInt(1);
-	                    reserva.setId(idReservaGenerado);
-	                }
-	            }
-	        }
-	    } catch (SQLException e) {
-	        e.printStackTrace();
-	    } finally {
-	        accesoBD.cerrarConexion();
-	    }
+    public ReservaServic() {
+		super();
 	}
 
 
-
-    public List<Reserva> buscarMesasDisponibles(String nombreApellido, int comensales, Date fecha, int restauranteId) {
-        List<Reserva> mesasDisponibles = new ArrayList<>();
+	public List<Mesa> buscarMesasDisponibles(String nombreApellido, int comensales, Date fecha, int restauranteId) {
+        List<Mesa> mesasDisponibles = new ArrayList<>();
         AccesoBD accesoBD = new AccesoBD();
-        MesaServic mesaServic = new MesaServic();
+        EstadoServic estadoservic = new EstadoServic();
 
         try {
             accesoBD.abrirConexion();
 
-            List<Mesa> mesasLiberadas = mesaServic.obtenerMesasLiberadasConCapacidadPorRestaurante(comensales, restauranteId);
+            String sql = "SELECT m.id, m.nro_mesa, m.capacidad, m.estado " +
+                         "FROM mesa m " +
+                         "LEFT JOIN reserva r ON m.id = r.id_mesa AND r.fecha = ? " +
+                         "WHERE m.idresto = ? AND (r.id IS NULL OR r.fecha IS DISTINCT FROM ?)";
 
-            String sql = "SELECT id_mesa FROM reserva WHERE fecha = ?";
-
-            try (Connection conn = accesoBD.getCon();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+            try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setDate(1, fecha);
+                stmt.setInt(2, restauranteId);
+                stmt.setDate(3, fecha);
+
                 ResultSet rs = stmt.executeQuery();
 
                 while (rs.next()) {
-                    int idMesaOcupada = rs.getInt("id_mesa");
-                    mesasLiberadas.removeIf(mesa -> mesa.getId_mesa() == idMesaOcupada);
+                    int idMesa = rs.getInt("id");
+                    int numeroMesa = rs.getInt("nro_mesa");
+                    int capacidadMesa = rs.getInt("capacidad");
+                    String estadoNombre = rs.getString("estado");
+
+                    Estado estado = estadoservic.obtenerEstadoPorNombre(estadoNombre);
+
+                    Mesa mesa = new Mesa();
+                    mesa.setId_mesa(idMesa);
+                    mesa.setNro_mesa(numeroMesa);
+                    mesa.setCapacidad(capacidadMesa);
+                    mesa.setEstado(estado);
+
+                    mesasDisponibles.add(mesa);
                 }
             }
-
-            for (Mesa mesa : mesasLiberadas) {
-                Reserva reserva = new Reserva();
-                reserva.setFecha(fecha);
-                reserva.setNombreApellido(nombreApellido);
-                reserva.setComensales(comensales);
-                reserva.setMesa(mesaServic.obtenerMesaPorId(mesa.getId_mesa())); // 
-
-                mesasDisponibles.add(reserva);
-            }
-
         } catch (SQLException e) {
             e.printStackTrace();
         } finally {
@@ -88,6 +71,39 @@ public class ReservaServic {
         }
 
         return mesasDisponibles;
+    }
+
+    
+    public void insertarReserva(Reserva reserva, int idMesaSeleccionada) {
+        AccesoBD accesoBD = new AccesoBD();
+
+        try {
+            accesoBD.abrirConexion();
+
+            String sql = "INSERT INTO reserva (nombreapellido, comensales, fecha, id_mesa) VALUES (?, ?, ?, ?)";
+            try (Connection conn = accesoBD.getCon();
+                 PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+                stmt.setString(1, reserva.getNombreApellido());
+                stmt.setInt(2, reserva.getComensales());
+                stmt.setDate(3, new java.sql.Date(reserva.getFecha().getTime()));
+                stmt.setInt(4, idMesaSeleccionada);
+
+                int filasAfectadas = stmt.executeUpdate();
+
+                if (filasAfectadas > 0) {
+                    ResultSet generatedKeys = stmt.getGeneratedKeys();
+                    if (generatedKeys.next()) {
+                        int idReservaGenerado = generatedKeys.getInt(1);
+                        reserva.setId(idReservaGenerado);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            accesoBD.cerrarConexion();
+        }
     }
 
     public List<Reserva> buscarReservasPorMesaYFecha(int idMesa, Date fecha) {
@@ -98,8 +114,7 @@ public class ReservaServic {
             accesoBD.abrirConexion();
 
             String sql = "SELECT * FROM reserva WHERE id_mesa = ? AND fecha = ?";
-            try (Connection conn = accesoBD.getCon();
-                 PreparedStatement stmt = conn.prepareStatement(sql)) {
+            try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
 
                 stmt.setInt(1, idMesa);
                 stmt.setDate(2, new java.sql.Date(fecha.getTime()));
@@ -110,12 +125,13 @@ public class ReservaServic {
                     int idReserva = rs.getInt("id");
                     String nombreApellido = rs.getString("nombreapellido");
                     int comensales = rs.getInt("comensales");
+                    Date fechaBD = rs.getDate("fecha");
 
                     Reserva reserva = new Reserva();
                     reserva.setId(idReserva);
                     reserva.setNombreApellido(nombreApellido);
                     reserva.setComensales(comensales);
-                    reserva.setFecha(fecha); 
+                    reserva.setFecha(fechaBD);
 
                     reservas.add(reserva);
                 }
@@ -128,4 +144,47 @@ public class ReservaServic {
 
         return reservas;
     }
+    public List<Reserva> buscarReservasPorFecha(Date fecha) {
+        List<Reserva> reservas = new ArrayList<>();
+        AccesoBD accesoBD = new AccesoBD();
+
+        try {
+            accesoBD.abrirConexion();
+
+            String sql = "SELECT * FROM reserva WHERE fecha = ?";
+            try (Connection conn = accesoBD.getCon(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setDate(1, fecha);
+
+                ResultSet rs = stmt.executeQuery();
+
+                while (rs.next()) {
+                    int idReserva = rs.getInt("id");
+                    String nombreApellido = rs.getString("nombreapellido");
+                    int comensales = rs.getInt("comensales");
+                    Date fechaBD = rs.getDate("fecha");
+
+                    Reserva reserva = new Reserva();
+                    reserva.setId(idReserva);
+                    reserva.setNombreApellido(nombreApellido);
+                    reserva.setComensales(comensales);
+                    reserva.setFecha(fechaBD);
+
+                    reservas.add(reserva);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        } finally {
+            accesoBD.cerrarConexion();
+        }
+
+        return reservas;
+    }
+    
+    public boolean hayReservaParaMesaEnFecha(int idMesa, Date fecha) {
+        List<Reserva> reservas = buscarReservasPorMesaYFecha(idMesa, fecha);
+        return !reservas.isEmpty();
+    }
+
+    
 }

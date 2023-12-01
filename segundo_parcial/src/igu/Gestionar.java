@@ -7,8 +7,10 @@ import java.awt.event.ActionListener;
 import java.util.List;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -25,12 +27,15 @@ public class Gestionar extends JFrame {
 
     private static final long serialVersionUID = 1L;
     private JPanel contentPane;
-    private JTextField textField;
+    private JTextField textFieldCapacidad;
+    private JTextField textFieldCantidad;
     private JTable table;
     private Resto restauranteSeleccionado;
+    private Menu menu;
 
-    public Gestionar(Resto restauranteSeleccionado) {
+    public Gestionar(Resto restauranteSeleccionado, Menu menu) {
         this.restauranteSeleccionado = restauranteSeleccionado;
+        this.menu = menu;
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBounds(100, 100, 572, 346);
@@ -50,59 +55,51 @@ public class Gestionar extends JFrame {
 
         JLabel lblCapacidad = new JLabel("Capacidad:");
         lblCapacidad.setFont(new Font("Arial", Font.PLAIN, 14));
-        lblCapacidad.setBounds(151, 62, 86, 19);
+        lblCapacidad.setBounds(10, 32, 86, 19);
         panel.add(lblCapacidad);
 
-        textField = new JTextField();
-        textField.setBounds(247, 62, 86, 20);
-        panel.add(textField);
-        textField.setColumns(10);
+        textFieldCapacidad = new JTextField();
+        textFieldCapacidad.setBounds(106, 32, 86, 20);
+        panel.add(textFieldCapacidad);
+        textFieldCapacidad.setColumns(10);
+
+        JLabel lblCantidad = new JLabel("Cantidad de Mesas:");
+        lblCantidad.setFont(new Font("Arial", Font.PLAIN, 14));
+        lblCantidad.setBounds(10, 62, 150, 19);
+        panel.add(lblCantidad);
+
+        textFieldCantidad = new JTextField();
+        textFieldCantidad.setBounds(160, 62, 40, 20);
+        panel.add(textFieldCantidad);
+        textFieldCantidad.setColumns(10);
 
         JButton btnAlta = new JButton("Alta");
         btnAlta.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                int capacidad = Integer.parseInt(textField.getText());
-
-                Mesa nuevaMesa = new Mesa();
-                nuevaMesa.setCapacidad(capacidad);
-                nuevaMesa.setConsumo(0);
-                nuevaMesa.setResto(restauranteSeleccionado);
-                nuevaMesa.setEstado(new EstadoServic().obtenerEstadoPorNombre("Liberada"));
-
-                MesaServic mesaServic = new MesaServic();
-                mesaServic.insertarMesa(nuevaMesa);
-
-                actualizarTablaMesasLiberadas();
+                darDeAltaMesas();
             }
         });
-        btnAlta.setBounds(151, 100, 89, 23);
+        btnAlta.setBounds(10, 100, 89, 23);
         panel.add(btnAlta);
 
         JButton btnBaja = new JButton("Baja");
         btnBaja.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                int selectedRow = table.getSelectedRow();
-
-                if (selectedRow != -1) {
-                    int numeroMesa = (int) table.getValueAt(selectedRow, 0);
-
-                    darDeBajaMesa(numeroMesa);
-
-                    // Actualizar tabla después de dar de baja una mesa
-                    actualizarTablaMesasLiberadas();
-                }
+                darDeBajaMesasSeleccionadas();
+                actualizarTablaMesasLiberadas();
             }
         });
-        btnBaja.setBounds(250, 100, 89, 23);
+        btnBaja.setBounds(109, 100, 89, 23);
         panel.add(btnBaja);
 
-        JButton btnSalir = new JButton("Salir");
+        JButton btnSalir = new JButton("Volver");
         btnSalir.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 dispose();
+                menu.setVisible(true);
             }
         });
-        btnSalir.setBounds(449, 100, 89, 23);
+        btnSalir.setBounds(208, 100, 89, 23);
         panel.add(btnSalir);
 
         JScrollPane scrollPane = new JScrollPane();
@@ -112,13 +109,66 @@ public class Gestionar extends JFrame {
         table = new JTable();
         scrollPane.setViewportView(table);
 
-        DefaultTableModel tableModel = new DefaultTableModel();
+        DefaultTableModel tableModel = new DefaultTableModel() {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return column == 0; 
+            }
+        };
+
+        tableModel.addColumn("Seleccionar");
         tableModel.addColumn("Número de Mesa");
         tableModel.addColumn("Capacidad");
         tableModel.addColumn("Estado");
+
         table.setModel(tableModel);
 
+        table.getColumnModel().getColumn(0).setCellEditor(new javax.swing.DefaultCellEditor(new javax.swing.JCheckBox()));
+        table.getColumnModel().getColumn(0).setCellRenderer(table.getDefaultRenderer(Boolean.class));
+
         actualizarTablaMesasLiberadas();
+    }
+
+    private void darDeAltaMesas() {
+        int cantidadMesas = Integer.parseInt(textFieldCantidad.getText());
+        int capacidad = Integer.parseInt(textFieldCapacidad.getText());
+
+        for (int i = 0; i < cantidadMesas; i++) {
+            Mesa nuevaMesa = new Mesa();
+            nuevaMesa.setCapacidad(capacidad);
+            nuevaMesa.setConsumo(0);
+            nuevaMesa.setResto(restauranteSeleccionado);
+            nuevaMesa.setEstado(new EstadoServic().obtenerEstadoPorNombre("Liberada"));
+
+            MesaServic mesaServic = new MesaServic();
+            mesaServic.insertarMesa(nuevaMesa);
+        }
+
+        actualizarTablaMesasLiberadas();
+    }
+
+    private void darDeBajaMesasSeleccionadas() {
+        DefaultTableModel tableModel = (DefaultTableModel) table.getModel();
+
+        for (int i = 0; i < table.getRowCount(); i++) {
+            Boolean selected = (Boolean) table.getValueAt(i, 0);
+            if (selected) {
+                int numeroMesa = (Integer) table.getValueAt(i, 1);
+
+                int confirmacion = JOptionPane.showConfirmDialog(this,
+                        "¿Estás seguro de dar de baja la mesa " + numeroMesa + "?",
+                        "Confirmar Baja de Mesa", JOptionPane.YES_NO_OPTION);
+
+                if (confirmacion == JOptionPane.YES_OPTION) {
+                    darDeBajaMesa(numeroMesa);
+                }
+            }
+        }
+    }
+
+    private void darDeBajaMesa(int numeroMesa) {
+        MesaServic mesaServic = new MesaServic();
+        mesaServic.darDeBajaMesa(numeroMesa);
     }
 
     private void actualizarTablaMesasLiberadas() {
@@ -130,18 +180,11 @@ public class Gestionar extends JFrame {
         List<Mesa> mesasLiberadas = mesaServic.obtenerTodasLasMesasLiberadasPorRestaurante(idRestaurante);
 
         for (Mesa mesa : mesasLiberadas) {
-            tableModel.addRow(new Object[]{mesa.getNro_mesa(), mesa.getCapacidad(), mesa.getEstado().nombreEstado()});
+            tableModel.addRow(new Object[]{false, mesa.getNro_mesa(), mesa.getCapacidad(), mesa.getEstado().nombreEstado()});
         }
 
         tableModel.fireTableDataChanged();
     }
 
-
-    private void darDeBajaMesa(int numeroMesa) {
-        MesaServic mesaServic = new MesaServic();
-        mesaServic.darDeBajaMesa(numeroMesa);
-
-        // Línea añadida para actualizar la tabla después de dar de baja una mesa
-        actualizarTablaMesasLiberadas();
-    }
+   
 }

@@ -1,6 +1,5 @@
 package igu;
 
-import java.awt.Color;
 import java.awt.Font;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -13,6 +12,7 @@ import javax.swing.JButton;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTable;
@@ -41,11 +41,17 @@ public class ReservaIgu extends JFrame {
     private DefaultTableModel tableModel;
     private Resto restauranteSeleccionado;
     private Mesa mesaSeleccionada;
-    EstadoServic estadoServic = new EstadoServic();
-    Reserva reserva = new Reserva();
-    MesaServic mesaServic = new MesaServic();
-    public ReservaIgu(Resto restauranteSeleccionado) {
+    private EstadoServic estadoServic; // Asegúrate de inicializar esto correctamente
+    private Reserva reserva = new Reserva();
+    private Menu menu;
+    private java.sql.Date fechaSeleccionada;
+    private SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
+
+    public ReservaIgu(Resto restauranteSeleccionado, Menu menu) {
         this.restauranteSeleccionado = restauranteSeleccionado;
+        this.menu = menu;
+
+        estadoServic = new EstadoServic(); // Asegúrate de inicializar esto correctamente
 
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setBounds(100, 100, 700, 500);
@@ -105,9 +111,7 @@ public class ReservaIgu extends JFrame {
         panel.add(btnNewButton);
 
         table = new JTable();
-        table.setModel(new DefaultTableModel(
-                new Object[][] {},
-                new String[] { "N° de mesa", "Capacidad", "Estado" }));
+        table.setModel(new DefaultTableModel(new Object[][] {}, new String[] { "N° de mesa", "Capacidad", "Estado" }));
         JScrollPane scrollPane = new JScrollPane(table);
         scrollPane.setBounds(20, 180, 650, 150);
         panel.add(scrollPane);
@@ -123,10 +127,10 @@ public class ReservaIgu extends JFrame {
         btnNewButton_1.setBounds(360, 350, 150, 25);
         panel.add(btnNewButton_1);
 
-        JButton btnNewButton_2 = new JButton("Salir");
+        JButton btnNewButton_2 = new JButton("Volver");
         btnNewButton_2.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                dispose();
+                volverAMenu();
             }
         });
         btnNewButton_2.setBounds(520, 350, 150, 25);
@@ -147,7 +151,7 @@ public class ReservaIgu extends JFrame {
 
                             mesaSeleccionada = new Mesa();
                             mesaSeleccionada.setId_mesa(idMesa);
-                            mesaSeleccionada.setNro_mesa(idMesa); 
+                            mesaSeleccionada.setNro_mesa(idMesa);
                             mesaSeleccionada.setCapacidad(capacidad);
                             mesaSeleccionada.setEstado(estadoServic.obtenerEstadoPorNombre("Reservada"));
                         } catch (NumberFormatException e) {
@@ -157,9 +161,6 @@ public class ReservaIgu extends JFrame {
                 }
             }
         });
-
-
-
     }
 
     private void buscarMesasDisponibles() {
@@ -167,39 +168,26 @@ public class ReservaIgu extends JFrame {
         int comensales = Integer.parseInt(textField_1.getText());
 
         String fechaStr = formattedTextField.getText();
-        SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-        Date fecha = null;
+
         try {
-            fecha = new Date(sdf.parse(fechaStr).getTime());
+            fechaSeleccionada = new java.sql.Date(sdf.parse(fechaStr).getTime());
         } catch (ParseException e) {
             e.printStackTrace();
         }
 
         int idRestaurante = restauranteSeleccionado.getIdResto();
 
-        List<Mesa> mesasDisponibles = mesaServic.obtenerMesasLiberadasConCapacidadPorRestaurante(comensales, idRestaurante);
+        ReservaServic reservaServic = new ReservaServic(estadoServic);
+        List<Mesa> mesasDisponibles = reservaServic.buscarMesasDisponibles(nombreApellido, comensales,
+                fechaSeleccionada, idRestaurante);
 
         mesaSeleccionada = null;
 
         if (!mesasDisponibles.isEmpty()) {
-            for (Mesa mesa : mesasDisponibles) {
-                if (mesaSeleccionada == null && !mesaEstaReservada(mesa, fecha)) {
-                    mesaSeleccionada = mesa;
-                    break;
-                }
-            }
-        }
-
-        if (mesaSeleccionada != null) {
-            mesaSeleccionada.setId_mesa(mesaServic.obtenerMesaPorId(mesaSeleccionada.getNro_mesa()).getId_mesa());
+            mesaSeleccionada = mesasDisponibles.get(0);
         }
 
         actualizarTabla(mesasDisponibles);
-    }
-    private boolean mesaEstaReservada(Mesa mesa, Date fecha) {
-        ReservaServic reservaServic = new ReservaServic();
-        List<Reserva> reservas = reservaServic.buscarReservasPorMesaYFecha(mesa.getId_mesa(), fecha);
-        return !reservas.isEmpty();
     }
 
     private void actualizarTabla(List<Mesa> mesas) {
@@ -207,7 +195,7 @@ public class ReservaIgu extends JFrame {
 
         for (Mesa mesa : mesas) {
             Estado estado = mesa.getEstado();
-            tableModel.addRow(new Object[] {mesa.getNro_mesa(), mesa.getCapacidad(), estado.nombreEstado() });
+            tableModel.addRow(new Object[] { mesa.getNro_mesa(), mesa.getCapacidad(), estado.nombreEstado() });
         }
     }
 
@@ -218,23 +206,37 @@ public class ReservaIgu extends JFrame {
 
             reserva.setNombreApellido(textField.getText());
             reserva.setComensales(Integer.parseInt(textField_1.getText()));
-
-            String fechaStr = formattedTextField.getText();
-            SimpleDateFormat sdf = new SimpleDateFormat("dd/MM/yyyy");
-            try {
-                Date fecha = new Date(sdf.parse(fechaStr).getTime());
-                reserva.setFecha(fecha);
-            } catch (ParseException e) {
-                e.printStackTrace();
-            }
-
+            reserva.setFecha(new java.sql.Date(fechaSeleccionada.getTime()));
             reserva.setMesa(mesaSeleccionada);
 
-            ReservaServic reservaServic = new ReservaServic();
-            System.out.println("ID de la mesa seleccionada: " + mesaSeleccionada.getId_mesa());
-            reservaServic.insertarReserva(reserva, mesaSeleccionada.getId_mesa());
+            int opcion = JOptionPane.showConfirmDialog(this, "¿Desea confirmar la reserva?", "Confirmar Reserva",
+                    JOptionPane.YES_NO_OPTION);
+
+            String respuesta = (opcion == JOptionPane.YES_OPTION) ? "Si" : "No";
+            System.out.println("Respuesta: " + respuesta);
+
+            if (opcion == JOptionPane.YES_OPTION) {
+                ReservaServic reservaServic = new ReservaServic(estadoServic);
+                reservaServic.insertarReserva(reserva, mesaSeleccionada.getId_mesa());
+
+                opcion = JOptionPane.showConfirmDialog(this, "¿Desea seguir reservando?", "Continuar Reservando",
+                        JOptionPane.YES_NO_OPTION);
+
+                respuesta = (opcion == JOptionPane.YES_OPTION) ? "Si" : "No";
+                System.out.println("Respuesta después de continuar reservando: " + respuesta);
+
+                if (opcion == JOptionPane.NO_OPTION) {
+                    volverAMenu();
+                }
+            }
         } else {
-            System.out.println("La mesa seleccionada no es válida. Asegúrate de que la mesa tenga un ID válido.");
+            System.out.println(
+                    "La mesa seleccionada no es válida. Asegúrate de que la mesa tenga un ID válido.");
         }
+    }
+
+    private void volverAMenu() {
+        menu.setVisible(true);
+        dispose();
     }
 }
